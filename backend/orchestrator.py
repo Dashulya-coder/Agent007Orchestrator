@@ -5,7 +5,7 @@ from backend.models.response_models import OrchestratorResponse
 
 def process_request(request):
     intake_result = analyze_message(request.message)
-    routing_result = route_request(intake_result)
+    routing_result = route_request(intake_result, mode=request.mode)
 
     risk = intake_result.get("risk", "low")
     sentiment = intake_result.get("sentiment", "neutral")

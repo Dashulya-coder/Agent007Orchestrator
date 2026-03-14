@@ -11,15 +11,20 @@ def main():
         "Help please",
     ]
 
-    for i, message in enumerate(messages, start=1):
-        print(f"\n--- Scenario {i} ---")
-        print("Message:", message)
+    modes = ["conservative", "assisted", "autonomous"]
 
-        intake_result = analyze_message(message)
-        routing_result = route_request(intake_result)
+    for mode in modes:
+        print(f"\n========== MODE: {mode.upper()} ==========")
 
-        print("Intake result:", intake_result)
-        print("Routing result:", routing_result)
+        for i, message in enumerate(messages, start=1):
+            print(f"\n--- Scenario {i} ---")
+            print("Message:", message)
+
+            intake_result = analyze_message(message)
+            routing_result = route_request(intake_result, mode=mode)
+
+            print("Intake result:", intake_result)
+            print("Routing result:", routing_result)
 
 
 if __name__ == "__main__":
