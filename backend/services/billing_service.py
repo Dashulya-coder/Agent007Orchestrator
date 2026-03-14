@@ -10,5 +10,8 @@ def issue_refund(payment_id: str):
     for p in payments:
         if p["id"] == payment_id:
             p["status"] = "refunded"
-            return f"Платіж {payment_id} успішно повернуто."
+            return {
+                "payments_found": len(user_pays),
+                "last_status": user_pays[-1]["status"] if user_pays else None
+            }
     return "Платіж не знайдено."
