@@ -49,3 +49,11 @@ class OrchestratorResponse(BaseModel):
     
     # Результат аналітики (від QA Agent)
     is_resolved: bool = False 
+
+class CaseSummary(BaseModel):
+    """Легка модель для сторінки моніторингу чатів"""
+    case_id: str
+    user_id: int
+    intent: str
+    priority: str
+    status: str
