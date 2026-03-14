@@ -19,6 +19,9 @@ active_cases = {
     "CS-A1B2": {
         "case_id": "CS-A1B2",
         "user_id": 3,
+        "messages": [
+            {"role": "client", "name": "Андрій", "text": "Мій акаунт зламали!"}
+        ],
         "final_reply_to_user": "Security check required",
         "intent": "Account Recovery",
         "priority": "urgent",
@@ -29,7 +32,7 @@ active_cases = {
         "copilot": {
             "summary": "User reports unauthorized access.",
             "probable_cause": "Multiple failed logins detected",
-            "suggested_actions": ["Block Account", "Manual ID Verification"],
+            "suggested_actions": ["check_payment", "sync_subscription"], # Використовуй свої реальні методи
             "draft_reply": "We detected suspicious activity..."
         }
     }

@@ -1,10 +1,11 @@
+// backend/frontend/js/client.js
+
 import * as R from './renderer.js';
 
 const initialState = {
   messages: [],
-  suggestions: [],
-  summary: {},
-  clientInfo: { name: 'Testing Kate', clientId: 'TEST-001' }
+  case_id: null, // Отримуємо від бекенду
+  clientInfo: { name: 'Андрій', clientId: '3' } // Дані з твоєї mock_db.py
 };
 
 function createClientStructure(){
@@ -28,9 +29,16 @@ function createClientStructure(){
 
   const inputRow = document.createElement('div');
   inputRow.className = 'input-row';
-  const input = document.createElement('input'); input.id = 'messageInput'; input.placeholder = 'Type a message';
-  const btn = document.createElement('button'); btn.id = 'sendBtn'; btn.textContent = 'Send';
-  inputRow.appendChild(input); inputRow.appendChild(btn);
+  const input = document.createElement('input'); 
+  input.id = 'messageInput'; 
+  input.placeholder = 'Type a message...';
+  
+  const btn = document.createElement('button'); 
+  btn.id = 'sendBtn'; 
+  btn.textContent = 'Send';
+  
+  inputRow.appendChild(input); 
+  inputRow.appendChild(btn);
 
   chatBox.appendChild(chatHeader);
   chatBox.appendChild(chat);
@@ -42,40 +50,59 @@ function createClientStructure(){
 function wire(){
   const sendBtn = document.getElementById('sendBtn');
   const input = document.getElementById('messageInput');
-  let caseId = null;
-  function makeId(){
-    if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-    // fallback simple uuid v4
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
-      const r = Math.random()*16|0, v = c=='x'?r:(r&0x3|0x8);
-      return v.toString(16);
-    });
-  }
 
   sendBtn.addEventListener('click', async () => {
-    const txt = input.value.trim(); if(!txt) return;
-    if(!caseId) caseId = makeId();
+    const txt = input.value.trim(); 
+    if(!txt) return;
 
-    // send initial process to backend with user_id, message and case_id
-    try{
-      await fetch('/process', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ user_id: initialState.clientInfo.clientId || initialState.clientInfo.name, message: txt, case_id: caseId })
-      });
-    }catch(e){
-      // ignore network errors in mock
-    }
-
-    initialState.messages.push({ role: 'client', name: 'Testing Kate', text: txt });
-    input.value = '';
+    // Оптимістичне оновлення UI
+    initialState.messages.push({ role: 'client', name: initialState.clientInfo.name, text: txt });
     R.renderMessages(initialState.messages);
+    input.value = '';
+
+    try {
+      if (!initialState.case_id) {
+        // Крок 1: Якщо це перше повідомлення — створюємо кейс
+        const response = await fetch('/process', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ 
+            user_id: parseInt(initialState.clientInfo.clientId), 
+            message: txt 
+          })
+        });
+        
+        const data = await response.json();
+        initialState.case_id = data.case_id; // Зберігаємо ID, згенерований бекендом
+        initialState.messages = data.messages || initialState.messages;
+      } else {
+        // Крок 2: Якщо кейс вже є — оновлюємо існуючий
+        const response = await fetch(`/cases/${initialState.case_id}/active`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ messages: initialState.messages })
+        });
+        
+        const data = await response.json();
+        initialState.messages = data.messages || initialState.messages;
+      }
+      
+      // Фінальний рендер після відповіді бекенду
+      R.renderMessages(initialState.messages);
+      
+    } catch(e) {
+      console.error("Connection lost. Backend might be down.");
+    }
   });
-  input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendBtn.click(); });
+
+  input.addEventListener('keydown', (e) => { 
+    if(e.key === 'Enter') sendBtn.click(); 
+  });
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', () => {
   createClientStructure();
   R.renderMessages(initialState.messages);
   wire();
 });
+

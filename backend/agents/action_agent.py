@@ -1,53 +1,53 @@
-from backend.services.billing_service import check_payment
-from backend.services.subscription_service import sync_subscription
+# backend/agents/action_agent.py
 
+from services.billing_service import check_payment, issue_refund
+from services.subscription_service import sync_subscription
+from services.mock_db import get_case
+from services.action_log import append_log
+from models.enums import RoutingDecision
 
-def execute_action(user_id: int, intake_result: dict) -> dict:
-    intent = intake_result.get("intent", "other")
+async def execute_action_flow(case_id: str, action_name: str):
+    """
+    Технічне ядро Action Agent: виконує інструменти та фіксує результат [cite: 57-59, 365].
+    """
+    case = get_case(case_id)
+    if not case:
+        return {"error": "Case not found"}
 
-    if intent == "duplicate_charge":
-        result = check_payment(user_id)
-        return {
-            "action_name": "check_payment",
-            "status": "success",
-            "details": result,
-            "is_resolved": True,
-            "final_reply_to_user": "We found your recent payment records and flagged this billing issue for resolution."
-        }
+    result = None
+    status = "success"
 
-    if intent == "paid_but_not_activated":
-        result = sync_subscription(user_id)
+    # 1. Виклик відповідного сервісу за командою [cite: 104-106, 417]
+    try:
+        if action_name == "check_payment":
+            result = check_payment(case["user_id"])
+        elif action_name == "issue_refund":
+            result = issue_refund("pay_123") 
+        elif action_name == "sync_subscription":
+            result = sync_subscription(case["user_id"])
+        else:
+            result = f"Unknown tool: {action_name}"
+            status = "error"
+    except Exception as e:
+        result = f"System Error: {str(e)}"
+        status = "error"
 
-        if "не знайдено" in result.lower():
-            return {
-                "action_name": "sync_subscription",
-                "status": "fail",
-                "details": result,
-                "is_resolved": False,
-                "final_reply_to_user": "We found your request, but we could not automatically update the subscription status."
-            }
-
-        return {
-            "action_name": "sync_subscription",
-            "status": "success",
-            "details": result,
-            "is_resolved": True,
-            "final_reply_to_user": "Your subscription status has been refreshed. Please check your account again."
-        }
-
-    if intent == "password_reset":
-        return {
-            "action_name": "password_reset_support",
-            "status": "success",
-            "details": "Password reset guidance prepared.",
-            "is_resolved": True,
-            "final_reply_to_user": "We can help you with a new password reset flow."
-        }
-
+    # 2. Реалізація FAIL FLOW: якщо дія не вдалася -> передача людині [cite: 131-132, 426]
+    if result and ("не знайдено" in str(result).lower() or status == "error"):
+        status = "error"
+        case["routing_decision"] = RoutingDecision.ESCALATE_TO_HUMAN
+        case["final_reply_to_user"] = "Автоматична дія не вдалася. Передаю кейс спеціалісту."
+    
+    # 3. Фіксація в Action Log (автоматично додає timestamp) 
+    append_log(
+        case_id=case_id,
+        action_name=action_name,
+        status=status,
+        details=str(result)
+    )
+    
     return {
-        "action_name": "no_action",
-        "status": "skipped",
-        "details": "No automated action available.",
-        "is_resolved": False,
-        "final_reply_to_user": None
+        "action_status": status,
+        "result_details": str(result),
+        "new_routing": case["routing_decision"]
     }

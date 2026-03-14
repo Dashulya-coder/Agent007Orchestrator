@@ -1,19 +1,12 @@
-
-from fastapi import FastAPI, Depends, HTTPException, Security
-from fastapi.security.api_key import APIKeyHeader
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 
-app = FastAPI(title="AI Support Orchestrator PRO")
+app = FastAPI(title="AI Support Orchestrator Demo")
 
-API_KEY = "skelar_hackathon_2026"
-api_key_header = APIKeyHeader(name="X-API-KEY")
-
-async def get_api_key(api_key: str = Security(api_key_header)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Could not validate credentials")
-    return api_key
-
+# Дозволяємо фронтенду вільно звертатися до бекенду
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,9 +14,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Усі роути захищені API ключем
-app.include_router(router, dependencies=[Depends(get_api_key)])
+# Монтуємо статику (переконайся, що шлях до папки frontend правильний)
+app.mount("/js", StaticFiles(directory="../frontend/js"), name="js")
+app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+
+# Роути для сторінок
+@app.get("/client_ui")
+async def client_ui(): return FileResponse("../frontend/client.html")
+
+@app.get("/worker_ui")
+async def worker_ui(): return FileResponse("../frontend/worker.html")
+
+# Підключаємо роути БЕЗ Depends(get_api_key)
+app.include_router(router)
 
 @app.get("/health")
 def health():
-    return {"status": "securely online"}
+    return {"status": "online"}

@@ -1,6 +1,5 @@
 export function startObserver(onActive){
   let stopped = false;
-  let mockTimeout = null;
 
   async function poll(){
     if(stopped) return;
@@ -20,15 +19,5 @@ export function startObserver(onActive){
     setTimeout(()=>{ if(!stopped) poll(); }, 2000);
   }
 
-  // Try real polling; also start a mock timer that fires after 5s if no /active available
   poll();
-  mockTimeout = setTimeout(()=>{
-    if(!stopped){
-      onActive('C-00124');
-    }
-  }, 5000);
-
-  return {
-    stop(){ stopped = true; if(mockTimeout) clearTimeout(mockTimeout); }
-  };
 }
