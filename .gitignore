@@ -1,10 +1,30 @@
-# IDE - IntelliJ IDEA
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
 .idea/
-*.iml
-*.iws
-*.ipr
-out/
+.vscode/
+
+# Environment variables
+.env
 
 # OS
 .DS_Store
-Thumbs.db
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build
+dist/
+build/
