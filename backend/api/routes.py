@@ -1,18 +1,18 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from models.request_models import UserRequest
+from models.response_models import OrchestratorResponse
 
 router = APIRouter()
 
-class UserRequest(BaseModel):
-    user_id: int
-    message: str
-
-@router.post("/process")
+@router.post("/process", response_model=OrchestratorResponse)
 async def process_request(request: UserRequest):
-    
-    #TODO: оркестрація
+    # Тут пізніше буде виклик orchestrator.process(request) 
+    # Поки що повертаємо мок-дані 
     return {
-        "status": "received",
-        "agent_thoughts": "Аналізую ваш запит...",
-        "final_reply": f"Привіт, ми отримали ваш запит: '{request.message}'"
+        "case_id": "case_123",
+        "user_id": request.user_id,
+        "final_reply_to_user": f"Ми отримали ваше повідомлення: {request.message}",
+        "routing_decision": "ai_assist_human",
+        "agent_states": [],
+        "action_log": []
     }
