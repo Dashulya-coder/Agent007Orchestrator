@@ -1,0 +1,11 @@
+{
+  "user_message": "I was charged $29 twice for my pro subscription this morning. Please refund the extra charge.",
+  "intake_analysis": {
+    "intent_clear": true,
+    "intent": "duplicate_charge",
+    "category": "billing",
+    "confidence": 0.98,
+    "risk": "low",
+    "sentiment": "frustrated"
+  }
+}
