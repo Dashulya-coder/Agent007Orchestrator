@@ -1,0 +1,11 @@
+{
+  "user_message": "I paid for premium yesterday, but my account is still on the free plan.",
+  "intake_analysis": {
+    "intent_clear": true,
+    "intent": "paid_but_not_activated",
+    "category": "access",
+    "confidence": 0.92,
+    "risk": "low",
+    "sentiment": "negative"
+  }
+}
