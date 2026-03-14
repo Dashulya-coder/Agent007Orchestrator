@@ -1,46 +1,53 @@
-from services.action_log import append_log 
-from services.mock_db import get_case
-from services.billing_service import check_payment, issue_refund
-from services.subscription_service import sync_subscription
-from models.enums import RoutingDecision, AgentStatus
+from backend.services.billing_service import check_payment
+from backend.services.subscription_service import sync_subscription
 
-async def execute_action_flow(case_id: str, suggested_action: str):
-    case = get_case(case_id)
-    if not case:
-        return {"error": "Case not found"}
 
-    result = None
-    status = "success"
+def execute_action(user_id: int, intake_result: dict) -> dict:
+    intent = intake_result.get("intent", "other")
 
-    # 1. Виклик відповідного сервісу 
-    try:
-        if suggested_action == "check_payment":
-            result = check_payment(case["user_id"])
-        elif suggested_action == "issue_refund":
-            result = issue_refund("pay_123") 
-        elif suggested_action == "sync_subscription":
-            result = sync_subscription(case["user_id"])
-        else:
-            result = f"Unknown tool: {suggested_action}"
-            status = "error"
-    except Exception as e:
-        result = f"System Error: {str(e)}"
-        status = "error"
+    if intent == "duplicate_charge":
+        result = check_payment(user_id)
+        return {
+            "action_name": "check_payment",
+            "status": "success",
+            "details": result,
+            "is_resolved": True,
+            "final_reply_to_user": "We found your recent payment records and flagged this billing issue for resolution."
+        }
 
-    # 2. Реалізація FAIL FLOW 
-    # Якщо дія не вдалася (наприклад, платіж не знайдено)
-    if result and ("не знайдено" in str(result).lower() or status == "error"):
-        status = "error"
-        # Передаємо кейс людині, бо AI не впорався [cite: 132, 287-288]
-        case["routing_decision"] = RoutingDecision.ESCALATE_TO_HUMAN
-        case["final_reply_to_user"] = "Автоматична дія не вдалася. Передаю кейс спеціалісту."
-    
-    # 3. ВИКЛИК СЕРВІСУ ЛОГУВАННЯ 
-    # Тепер замість ручного додавання в список, використовуємо append_log
-    append_log(case_id, suggested_action, status, result)
-    
+    if intent == "paid_but_not_activated":
+        result = sync_subscription(user_id)
+
+        if "не знайдено" in result.lower():
+            return {
+                "action_name": "sync_subscription",
+                "status": "fail",
+                "details": result,
+                "is_resolved": False,
+                "final_reply_to_user": "We found your request, but we could not automatically update the subscription status."
+            }
+
+        return {
+            "action_name": "sync_subscription",
+            "status": "success",
+            "details": result,
+            "is_resolved": True,
+            "final_reply_to_user": "Your subscription status has been refreshed. Please check your account again."
+        }
+
+    if intent == "password_reset":
+        return {
+            "action_name": "password_reset_support",
+            "status": "success",
+            "details": "Password reset guidance prepared.",
+            "is_resolved": True,
+            "final_reply_to_user": "We can help you with a new password reset flow."
+        }
+
     return {
-        "action_status": status,
-        "result_details": str(result),
-        "new_routing": case["routing_decision"]
+        "action_name": "no_action",
+        "status": "skipped",
+        "details": "No automated action available.",
+        "is_resolved": False,
+        "final_reply_to_user": None
     }
