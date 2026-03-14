@@ -10,7 +10,7 @@ class TestRoutingAgent(unittest.TestCase):
 
     def test_high_risk_always_escalates(self):
         intake = {"intent_clear": True, "intent": "account_compromised", "confidence": 0.95, "risk": "high"}
-        result = route_request(intake, mode="autonomous")  # Навіть в автономному режимі!
+        result = route_request(intake, mode="autonomous")
         self.assertEqual(result["routing_decision"], "escalate_to_human")
 
 
