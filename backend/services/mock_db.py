@@ -5,6 +5,16 @@ users = {
     3: {"id": 3, "name": "Андрій", "failed_logins": 5} # HIGH RISK USER 
 }
 
+subscriptions = {
+    1: {"user_id": 1, "status": "inactive"},
+    3: {"id": 3, "status": "premium"}
+}
+
+payments = [
+    {"id": "pay_123", "user_id": 1, "amount": 29.0, "status": "success"},
+    {"id": "pay_999", "user_id": 3, "amount": 100.0, "status": "failed"} # Для тесту Fail Flow
+]
+
 active_cases = {
     "CS-A1B2": {
         "case_id": "CS-A1B2",
