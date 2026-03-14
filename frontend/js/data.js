@@ -7,9 +7,9 @@ export async function loadData(key){
 
   if(key){
     try{
-      // try path-style first
-      return await tryFetch(`/data/${encodeURIComponent(key)}`);
-    }catch(e){}}
+      return await tryFetch(`/cases/${encodeURIComponent(key)}`);
+    }catch(e){}
+  }
 
   // Fallback mock data (used when fetch fails)
   const mock = {
@@ -17,7 +17,6 @@ export async function loadData(key){
       {role:'client', name:'Jane Doe', text:"Hi — my payment didn't go through and I need help."},
       {role:'agent', name:'Agent Sam', text:'I can help with that — can you confirm your last 4 digits of card?'},
       {role:'client', name:'Jane Doe', text:"It's 1234. Also I need assistance scheduling a visit."},
-      {role:'worker', name:'Worker Lee', text:'I can take the visit on Friday afternoon.'}
     ],
     suggestions: [
       'I can look into the payment status and follow up shortly.',
@@ -45,9 +44,9 @@ export async function pushAndWait(key, messages, options = {}){
   const { pollInterval = 1000, timeout = 30000 } = options;
   if(!key) throw new Error('pushAndWait requires a key');
 
-  // Fire-and-forget POST to push updates to backend (backend may return 202)
+  // Post worker update to the case active endpoint
   try{
-    await fetch(`/push/${encodeURIComponent(key)}`, {
+    await fetch(`/cases/${encodeURIComponent(key)}/active`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ messages })
@@ -57,15 +56,14 @@ export async function pushAndWait(key, messages, options = {}){
   }
 
   const start = Date.now();
-  let attempts = 0;
   const mockDelay = options.mockDelay || 3000;
   let sawNetwork = false;
   while(Date.now() - start < timeout){
     try{
-      const res = await fetch(`/updates/${encodeURIComponent(key)}`);
+      // prefer case endpoint for updates
+      const res = await fetch(`/cases/${encodeURIComponent(key)}`);
       if(res.ok){
         const payload = await res.json();
-        // expect payload to include messages and optionally suggestions/summary
         if(payload && Array.isArray(payload.messages)){
           return payload;
         }
@@ -74,10 +72,8 @@ export async function pushAndWait(key, messages, options = {}){
     }catch(e){
       // swallow and retry
     }
-    attempts++;
     // If we haven't observed a working backend within mockDelay, return a simulated mock reply
     if(!sawNetwork && (Date.now() - start) >= mockDelay){
-      // create a simulated client reply and suggestions
       const clientReply = { role: 'client', name: 'Client Mock', text: 'Thanks — I received the update and will follow up.' };
       const newSuggestions = [
         'Thanks for the update — I will check and confirm.',
@@ -90,6 +86,7 @@ export async function pushAndWait(key, messages, options = {}){
         clientInfo: { name: `Client ${key}`, clientId: key }
       };
     }
+
     await new Promise(r => setTimeout(r, pollInterval));
   }
 
