@@ -40,3 +40,58 @@ export async function loadData(key){
 
   return mock;
 }
+
+export async function pushAndWait(key, messages, options = {}){
+  const { pollInterval = 1000, timeout = 30000 } = options;
+  if(!key) throw new Error('pushAndWait requires a key');
+
+  // Fire-and-forget POST to push updates to backend (backend may return 202)
+  try{
+    await fetch(`/push/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ messages })
+    });
+  }catch(e){
+    // ignore network errors here; we'll poll for updates below
+  }
+
+  const start = Date.now();
+  let attempts = 0;
+  const mockDelay = options.mockDelay || 3000;
+  let sawNetwork = false;
+  while(Date.now() - start < timeout){
+    try{
+      const res = await fetch(`/updates/${encodeURIComponent(key)}`);
+      if(res.ok){
+        const payload = await res.json();
+        // expect payload to include messages and optionally suggestions/summary
+        if(payload && Array.isArray(payload.messages)){
+          return payload;
+        }
+        sawNetwork = true;
+      }
+    }catch(e){
+      // swallow and retry
+    }
+    attempts++;
+    // If we haven't observed a working backend within mockDelay, return a simulated mock reply
+    if(!sawNetwork && (Date.now() - start) >= mockDelay){
+      // create a simulated client reply and suggestions
+      const clientReply = { role: 'client', name: 'Client Mock', text: 'Thanks — I received the update and will follow up.' };
+      const newSuggestions = [
+        'Thanks for the update — I will check and confirm.',
+        'Please provide the transaction ID so I can investigate.'
+      ];
+      return {
+        messages: (messages || []).concat([clientReply]),
+        suggestions: newSuggestions,
+        summary: { summaryText: 'Client replied to the worker. Follow-up required.', priority: 'High', tags: ['client-replied'] },
+        clientInfo: { name: `Client ${key}`, clientId: key }
+      };
+    }
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+
+  return null;
+}

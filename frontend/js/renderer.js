@@ -84,7 +84,9 @@ export function renderMessages(messages){
     div.className = 'bubble ' + m.role;
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = `${m.name} • ${m.role}`;
+    // Display agent name in English as 'AI'
+    const displayName = (m.role === 'agent') ? 'AI' : (m.name || '');
+    meta.textContent = `${displayName} • ${m.role}`;
     const text = document.createElement('div');
     text.textContent = m.text;
     div.appendChild(meta);
@@ -106,6 +108,16 @@ export function renderSuggestions(suggestions){
     btn.addEventListener('click', ()=>{ const inp = document.getElementById('messageInput'); if(inp) inp.value = t; });
     s.appendChild(btn);
   });
+}
+
+export function showSuggestionsPlaceholder(text){
+  const s = document.getElementById('suggestions');
+  if(!s) return;
+  s.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'suggestion-placeholder';
+  div.textContent = text;
+  s.appendChild(div);
 }
 
 export function renderSummary(summary){

@@ -43,11 +43,11 @@ body{margin:0;font-family:Inter,Segoe UI,system-ui,Arial; background:var(--bg); 
 .main-grid{display:grid;grid-template-columns:50% 50%;gap:16px;padding:16px;flex:1;overflow:hidden}
 .chat-column{display:flex;flex-direction:column;gap:12px;min-height:0}
 .chat-header{padding:8px 12px;background:var(--boxbg);border-radius:0;border:none;color:var(--text)}
-.chat{background:linear-gradient(180deg,var(--chat-grad-start),var(--chat-grad-end));padding:16px;border-radius:10px;min-height:0;flex:1;overflow:auto;border:1px solid var(--border-3)}
+.chat{background:linear-gradient(180deg,var(--chat-grad-start),var(--chat-grad-end));padding:16px;border-radius:10px;min-height:0;flex:1;overflow:auto;border:1px solid var(--border-3);display:flex;flex-direction:column}
 .bubble{max-width:70%;padding:10px 14px;border-radius:14px;margin:8px 0;box-shadow:0 1px 0 rgba(0,0,0,0.03);overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .bubble.client{background:var(--client);align-self:flex-start;border:1px solid var(--chat-border-client)}
 .bubble.agent{background:var(--agent);align-self:flex-end;border:1px solid var(--chat-border-agent)}
-.bubble.worker{background:var(--worker);align-self:center;border:1px solid var(--chat-border-worker)}
+.bubble.worker{background:var(--worker);align-self:flex-end;border:1px solid var(--chat-border-worker)}
 .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
 .input-row{display:flex;gap:8px;padding:8px;background:var(--boxbg);border-radius:8px;border:1px solid #e8eef8}
 .input-row input{flex:1;padding:10px 12px;border-radius:6px;border:1px solid #dfe8f8}
@@ -60,6 +60,7 @@ body{margin:0;font-family:Inter,Segoe UI,system-ui,Arial; background:var(--bg); 
 .suggestions{display:flex;flex-wrap:wrap;gap:8px}
 .suggestion{background:var(--suggestion-bg);border:1px solid var(--suggestion-border);padding:8px 10px;border-radius:8px;cursor:pointer}
 .suggestion{background:var(--suggestion-bg);border:1px solid var(--suggestion-border);padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text)}
+.suggestion-placeholder{padding:8px 10px;border-radius:8px;color:var(--muted)}
 .sidebar{display:flex;flex-direction:column;gap:12px}
 .summary-card,.info-card{background:var(--boxbg);padding:12px;border-radius:0;border:none}
 .summary p{margin:6px 0}

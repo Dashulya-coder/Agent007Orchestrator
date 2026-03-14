@@ -1,18 +1,44 @@
-import { loadData } from './data.js';
+import { loadData, pushAndWait } from './data.js';
 import * as R from './renderer.js';
 import { startObserver } from './observer.js';
 
 let state = null;
+let isWaitingForBackend = false;
 
-function sendMessage(){
+async function sendMessage(){
+  if(!state || isWaitingForBackend) return;
   const input = document.getElementById('messageInput');
   const text = input.value.trim();
   if(!text) return;
   const role = 'worker';
   const name = 'Worker Lee';
+
+  // optimistic update
   state.messages.push({role, name, text});
   input.value = '';
   R.renderMessages(state.messages);
+
+  // notify backend and wait for possible new messages/setups
+  isWaitingForBackend = true;
+  try{
+    // clear old suggestions and show waiting placeholder while backend processes
+    state.suggestions = [];
+    R.showSuggestionsPlaceholder('Waiting for new suggestions...');
+
+    const resp = await pushAndWait(state.clientInfo?.clientId || state.clientInfo?.name, state.messages, {pollInterval:1000, timeout:30000});
+    if(resp){
+      // merge returned messages and suggestions only; do not change clientInfo/summary/priority
+      state.messages = resp.messages || state.messages;
+      if(resp.suggestions) state.suggestions = resp.suggestions;
+      R.renderMessages(state.messages);
+      if(state.suggestions) R.renderSuggestions(state.suggestions);
+    }
+  }catch(e){
+    // ignore — keep optimistic state
+    console.error('pushAndWait error', e);
+  }finally{
+    isWaitingForBackend = false;
+  }
 }
 
 async function init(){
