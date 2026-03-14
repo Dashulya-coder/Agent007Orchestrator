@@ -1,27 +1,22 @@
-from datetime import datetime
+from services.action_log import append_log 
 from services.mock_db import get_case
 from services.billing_service import check_payment, issue_refund
 from services.subscription_service import sync_subscription
 from models.enums import RoutingDecision, AgentStatus
 
 async def execute_action_flow(case_id: str, suggested_action: str):
-    """
-    Технічне ядро Action Agent: викликає інструменти та фіксує результат.
-    """
     case = get_case(case_id)
     if not case:
         return {"error": "Case not found"}
 
-    # Початковий стан: агент почав роботу
     result = None
     status = "success"
 
-    # 1. Виклик відповідного сервісу залежно від команди [cite: 117-124, 423]
+    # 1. Виклик відповідного сервісу 
     try:
         if suggested_action == "check_payment":
             result = check_payment(case["user_id"])
         elif suggested_action == "issue_refund":
-            # Імітуємо отримання payment_id з логів або контексту
             result = issue_refund("pay_123") 
         elif suggested_action == "sync_subscription":
             result = sync_subscription(case["user_id"])
@@ -33,22 +28,17 @@ async def execute_action_flow(case_id: str, suggested_action: str):
         status = "error"
 
     # 2. Реалізація FAIL FLOW 
+    # Якщо дія не вдалася (наприклад, платіж не знайдено)
     if result and ("не знайдено" in str(result).lower() or status == "error"):
         status = "error"
-        # Міняємо маршрут на людину, бо AI не впорався [cite: 190]
+        # Передаємо кейс людині, бо AI не впорався [cite: 132, 287-288]
         case["routing_decision"] = RoutingDecision.ESCALATE_TO_HUMAN
         case["final_reply_to_user"] = "Автоматична дія не вдалася. Передаю кейс спеціалісту."
     
-    # 3. Фіксація в Action Log 
-    new_log_entry = {
-        "timestamp": datetime.now(),
-        "action_name": suggested_action,
-        "status": status,
-        "details": str(result)
-    }
-    case["action_log"].append(new_log_entry)
+    # 3. ВИКЛИК СЕРВІСУ ЛОГУВАННЯ 
+    # Тепер замість ручного додавання в список, використовуємо append_log
+    append_log(case_id, suggested_action, status, result)
     
-    # Оновлюємо статус агента для UI
     return {
         "action_status": status,
         "result_details": str(result),
