@@ -2,7 +2,7 @@ from backend.agents.intake_agent import analyze_message
 from backend.agents.routing_agent import route_request
 from backend.agents.action_agent import execute_action
 from backend.models.response_models import OrchestratorResponse
-
+from backend.agents.copilot_agent import generate_copilot_data
 
 def process_request(request):
     intake_result = analyze_message(request.message)
@@ -60,6 +60,12 @@ def process_request(request):
         })
 
     elif routing_decision in {"ai_assist_human", "escalate_to_human"}:
+
+        copilot_data = generate_copilot_data(
+            request.message,
+            f"Intent: {intake_result.get('intent')}, Category: {intake_result.get('category')}"
+        )
+
         agent_states.append({
             "name": "Action",
             "status": "idle",
@@ -67,8 +73,8 @@ def process_request(request):
         })
         agent_states.append({
             "name": "Copilot",
-            "status": "working",
-            "thought": "Human support or copilot assistance needed"
+            "status": "done",
+            "thought": "Generated assistance data for human agent"
         })
 
     else:
@@ -94,6 +100,6 @@ def process_request(request):
         routing_decision=routing_decision,
         agent_states=agent_states,
         action_log=action_log,
-        copilot=None,
+        copilot=copilot_data if routing_decision in {"ai_assist_human", "escalate_to_human"} else None,
         is_resolved=is_resolved
     )
