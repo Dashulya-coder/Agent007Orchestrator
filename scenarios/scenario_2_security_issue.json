@@ -6,6 +6,6 @@
     "category": "security",
     "confidence": 0.95,
     "risk": "high",
-    "sentiment": "panic"
+    "sentiment": "negative"
   }
 }
