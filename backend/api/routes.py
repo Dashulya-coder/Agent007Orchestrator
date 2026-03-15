@@ -41,12 +41,14 @@ async def get_case_details(case_id: str):
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
+    copilot = case.get("copilot") or {}
+
     return {
         "case_id": case_id,
         "messages": case.get("messages", []),
-        "suggestions": case.get("copilot", {}).get("suggested_actions", []),
+        "suggestions": copilot.get("suggested_actions", []),
         "summary": {
-            "summaryText": case.get("copilot", {}).get("summary", ""),
+            "summaryText": copilot.get("summary", ""),
             "priority": str(case.get("priority", "medium")),
             "tags": [case.get("intent", "general")],
         },
@@ -66,13 +68,14 @@ async def update_case_from_worker(case_id: str, payload: dict):
         raise HTTPException(status_code=404, detail="Case not found")
 
     case["messages"] = payload.get("messages", case.get("messages", []))
+    copilot = case.get("copilot") or {}
 
     return {
         "case_id": case_id,
         "messages": case["messages"],
-        "suggestions": case.get("copilot", {}).get("suggested_actions", []),
+        "suggestions": copilot.get("suggested_actions", []),
         "summary": {
-            "summaryText": case.get("copilot", {}).get("summary", ""),
+            "summaryText": copilot.get("summary", ""),
             "priority": str(case.get("priority", "medium")),
             "tags": [case.get("intent", "general")],
         },

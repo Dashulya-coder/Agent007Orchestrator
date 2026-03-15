@@ -1,8 +1,10 @@
+import uuid
 from backend.agents.intake_agent import analyze_message
 from backend.agents.routing_agent import route_request
 from backend.agents.action_agent import execute_action_flow
 from backend.models.response_models import OrchestratorResponse
 from backend.agents.copilot_agent import generate_copilot_data
+from backend.services.mock_db import save_case, get_case
 
 
 async def process_request(request):
@@ -20,7 +22,7 @@ async def process_request(request):
     else:
         priority = "medium"
 
-    action_log = []
+    case_id = f"CS-{uuid.uuid4().hex[:4].upper()}"
     final_reply = f"We received your message: {request.message}"
     is_resolved = False
     copilot_data = None
@@ -38,6 +40,30 @@ async def process_request(request):
         }
     ]
 
+    initial_case = {
+        "case_id": case_id,
+        "user_id": request.user_id,
+        "messages": [
+            {
+                "role": "client",
+                "name": f"User {request.user_id}",
+                "text": request.message
+            }
+        ],
+        "final_reply_to_user": final_reply,
+        "intent": intake_result.get("intent"),
+        "category": intake_result.get("category"),
+        "priority": priority,
+        "sentiment": sentiment,
+        "routing_decision": routing_decision,
+        "status": "open",
+        "agent_states": agent_states.copy(),
+        "action_log": [],
+        "copilot": None,
+        "is_resolved": False,
+    }
+    save_case(initial_case)
+
     if routing_decision == "ai_auto_resolve":
         action_name_map = {
             "duplicate_charge": "check_payment",
@@ -46,13 +72,7 @@ async def process_request(request):
         }
 
         action_name = action_name_map.get(intake_result.get("intent"), "unknown_tool")
-        action_result = await execute_action_flow("CS-A1B2", action_name)
-
-        action_log.append({
-            "action_name": action_name,
-            "status": action_result.get("action_status", "error"),
-            "details": action_result.get("result_details", "No details")
-        })
+        action_result = await execute_action_flow(case_id, action_name)
 
         if action_result.get("action_status") == "success":
             if action_name == "check_payment":
@@ -108,8 +128,16 @@ async def process_request(request):
             "thought": "Copilot not started"
         })
 
+    case = get_case(case_id)
+    if case:
+        case["final_reply_to_user"] = final_reply
+        case["agent_states"] = agent_states
+        case["copilot"] = copilot_data
+        case["is_resolved"] = is_resolved
+        case["status"] = "resolved" if is_resolved else "open"
+
     return OrchestratorResponse(
-        case_id="case_123",
+        case_id=case_id,
         user_id=request.user_id,
         final_reply_to_user=final_reply,
         intent=intake_result.get("intent"),
@@ -118,7 +146,7 @@ async def process_request(request):
         sentiment=sentiment,
         routing_decision=routing_decision,
         agent_states=agent_states,
-        action_log=action_log,
+        action_log=case.get("action_log", []) if case else [],
         copilot=copilot_data,
         is_resolved=is_resolved
     )
