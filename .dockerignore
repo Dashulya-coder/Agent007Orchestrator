@@ -1,0 +1,10 @@
+.git
+.gitignore
+tests/
+README.md
+LICENSE
+.env.example
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
