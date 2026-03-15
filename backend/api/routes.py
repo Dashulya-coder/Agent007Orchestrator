@@ -16,7 +16,7 @@ async def get_active_case_key():
     for cid, case in active_cases.items():
         if case["routing_decision"] in [RoutingDecision.ESCALATE_TO_HUMAN, RoutingDecision.AI_ASSIST_HUMAN]:
             return {"key": cid}
-    return None
+    return {}
 
 @router.post("/process", response_model=OrchestratorResponse)
 async def start_new_case(request: UserRequest):
