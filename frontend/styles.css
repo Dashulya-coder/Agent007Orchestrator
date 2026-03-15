@@ -1,39 +1,39 @@
 :root{
-    /* Dark theme (default) */
-    --bg: #0b0f14;
-    --boxbg: var(--bg);
-    --muted: #ffefe9;
-    --text: #ffffff;
-    --accent: #ff2200;
+  /* Dark theme (default) */
+  --bg: #0a0f1a;
+  --boxbg: #0d1422;
+  --muted: #b8c7d9;
+  --text: #e8f1ff;
+  --accent: #4f8edc;
 
-    /* Message bubbles */
-    --client: #063a1a; /* dark greenish */
-    --agent: #072244;  /* dark blue */
-    --worker: #4b0f12; /* dark red (company red with greenish notes) */
+  /* Message bubbles (different dark blues) */
+  --client: #1f3a5f;   /* deep blue */
+  --agent: #27496d;    /* slightly brighter blue */
+  --worker: #19324a;   /* darkest blue */
 
-    /* Chat-specific border colors (darker versions of bubble colors) */
-    --chat-border-client: #042813;
-    --chat-border-agent: #041a2a;
-    --chat-border-worker: #3a0c0e;
+  /* Chat-specific border colors */
+  --chat-border-client: #3f6fa6b3;
+  --chat-border-agent: #4f8edcb3;
+  --chat-border-worker: #2f5e8bb3;
 
-    /* External links / other boxes border (separate variable) */
-    --external-border: rgba(255,255,255,0.04);
+  /* External links / other boxes border */
+  --external-border: rgba(120,160,220,0.15);
 
-    /* Borders / strokes */
-    --border-1: #ffefe9;
-    --border-2: #0b0f14;
-    --border-3: #0b0f14;
+  /* Borders / strokes */
+  --border-1: #4f8edc;
+  --border-2: #0a0f1a;
+  --border-3: #132033;
 
-    /* UI accents */
-    --suggestion-bg: #0b0f14;;
-    --suggestion-border: #000000;;
-    --agent-border: #0b0f14;;
-    --worker-border: #0b0f14;;
+  /* UI accents */
+  --suggestion-bg: #0f1726;
+  --suggestion-border: #3f6fa6;
+  --agent-border: #4f8edc;
+  --worker-border: #2f5e8b;
 
-    /* Gradients */
-    --chat-grad-start: #1b1f24;
-    --chat-grad-end: #1b1f24;
-  }
+  /* Gradients */
+  --chat-grad-start: #0f1726;
+  --chat-grad-end: #0a0f1a;
+}
 
 .app-root,html,body,#app{height:100%}
 /* Make app layout a column so main grid can fill remaining space */
