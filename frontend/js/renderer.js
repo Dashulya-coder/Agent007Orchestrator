@@ -137,7 +137,14 @@ export function renderClientInfo(clientInfo){
   if(!area) return;
   area.innerHTML = '';
   const d = clientInfo || {};
-  area.innerHTML = `<div><strong>${d.name||''}</strong></div><div>ID: ${d.clientId||''}</div><div>Last payment: ${d.lastPayment||''}</div><div>Dues: ${d.dues||''}</div>`;
+
+  Object.entries(d).forEach(([key, value]) => {
+    const row = document.createElement('div');
+    // Перетворюємо camelCase в читабельний вигляд: "lastPayment" → "Last Payment"
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+    row.innerHTML = `<strong>${label}:</strong> ${value ?? '—'}`;
+    area.appendChild(row);
+  });
 }
 
 export function renderAll(state){

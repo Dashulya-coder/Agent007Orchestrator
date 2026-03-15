@@ -1,18 +1,38 @@
 from fastapi import APIRouter, HTTPException
 import uuid
+import random
 from datetime import datetime
 from models.request_models import UserRequest
 from models.response_models import OrchestratorResponse, CaseSummary, AgentState, ActionLogEntry
 from models.enums import AgentStatus, RoutingDecision
-from services.mock_db import active_cases, save_case, get_case
+from services.mock_db import active_cases, save_case, get_case, users
 from services.account_service import evaluate_security_risk
 from agents.action_agent import execute_action_flow
 
 router = APIRouter()
 
+# Мокові відповіді клієнта залежно від останнього повідомлення воркера
+CLIENT_REPLIES = [
+    "Дякую, зрозумів. Що мені робити далі?",
+    "Окей, я спробую. Скільки часу це займе?",
+    "Добре, але у мене ще є питання...",
+    "Чудово! Це вирішило мою проблему.",
+    "Не зовсім розумію, можете пояснити детальніше?",
+    "Дякую за допомогу! Коли це буде виправлено?",
+    "Зрозумів, спробую зараз.",
+]
+
+# Мокові пропозиції після відповіді воркера
+SUGGESTION_POOL = [
+    ["verify_identity", "reset_password", "check_payment"],
+    ["sync_subscription", "refund_payment", "escalate_to_manager"],
+    ["archive_case", "notify_user", "check_payment"],
+    ["send_instructions", "verify_email", "sync_subscription"],
+    ["close_case", "follow_up_email", "escalate_to_manager"],
+]
+
 @router.get("/active")
 async def get_active_case_key():
-    """Повертає ID кейсу для моніторингу."""
     for cid, case in active_cases.items():
         if case["routing_decision"] in [RoutingDecision.ESCALATE_TO_HUMAN, RoutingDecision.AI_ASSIST_HUMAN]:
             return {"key": cid}
@@ -51,7 +71,7 @@ async def get_case_details(case_id: str):
         raise HTTPException(status_code=404, detail="Case not found")
     
     return {
-        "case_id": case_id,  # Обов'язково для ініціалізації state.case_id
+        "case_id": case_id,
         "messages": case.get("messages", []),
         "suggestions": case.get("copilot", {}).get("suggested_actions", []),
         "summary": {
@@ -70,15 +90,33 @@ async def get_case_details(case_id: str):
 @router.post("/cases/{case_id}/active")
 async def update_case_from_worker(case_id: str, payload: dict):
     case = get_case(case_id)
-    if not case: 
+    if not case:
         raise HTTPException(status_code=404)
-    
-    case["messages"] = payload.get("messages", [])
-    
+
+    messages = payload.get("messages", [])
+
+    # Перевіряємо що останнє повідомлення від воркера — тоді додаємо мокову відповідь клієнта
+    if messages and messages[-1].get("role") == "worker":
+        client_name = users.get(case.get("user_id"), {}).get("name", "Client")
+        mock_reply = {
+            "role": "client",
+            "name": client_name,
+            "text": random.choice(CLIENT_REPLIES)
+        }
+        messages.append(mock_reply)
+
+    case["messages"] = messages
+
+    # Оновлюємо пропозиції на нові випадкові
+    new_suggestions = random.choice(SUGGESTION_POOL)
+    case["copilot"]["suggested_actions"] = new_suggestions
+
+    save_case(case)
+
     return {
-        "case_id": case_id, # Обов'язково для продовження сесії
+        "case_id": case_id,
         "messages": case["messages"],
-        "suggestions": case.get("copilot", {}).get("suggested_actions", []),
+        "suggestions": new_suggestions,
         "summary": {
             "summaryText": case.get("copilot", {}).get("summary", ""),
             "priority": case.get("priority", "medium"),
