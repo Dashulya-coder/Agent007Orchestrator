@@ -1,0 +1,11 @@
+{
+  "user_message": "Someone changed my email and password! I didn't do this and I can't access my account right now. Help!",
+  "intake_analysis": {
+    "intent_clear": true,
+    "intent": "account_compromised",
+    "category": "security",
+    "confidence": 0.95,
+    "risk": "high",
+    "sentiment": "negative"
+  }
+}
