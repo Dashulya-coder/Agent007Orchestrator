@@ -5,7 +5,7 @@ export function createStructure(clientName){
   const topbar = document.createElement('div');
   topbar.className = 'topbar';
   const title = document.createElement('h1');
-  title.textContent = 'Support Worker — Chat Dashboard (Mock)';
+  title.textContent = 'Support Worker — Chat Dashboard';
   topbar.appendChild(title);
 
   const mainGrid = document.createElement('div');
