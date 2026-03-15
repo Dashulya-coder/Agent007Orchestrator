@@ -1,10 +1,11 @@
 from backend.agents.intake_agent import analyze_message
 from backend.agents.routing_agent import route_request
-from backend.agents.action_agent import execute_action
+from backend.agents.action_agent import execute_action_flow
 from backend.models.response_models import OrchestratorResponse
 from backend.agents.copilot_agent import generate_copilot_data
 
-def process_request(request):
+
+async def process_request(request):
     intake_result = analyze_message(request.message)
     routing_result = route_request(intake_result, mode=request.mode)
 
@@ -22,6 +23,7 @@ def process_request(request):
     action_log = []
     final_reply = f"We received your message: {request.message}"
     is_resolved = False
+    copilot_data = None
 
     agent_states = [
         {
@@ -37,21 +39,39 @@ def process_request(request):
     ]
 
     if routing_decision == "ai_auto_resolve":
-        action_result = execute_action(request.user_id, intake_result)
+        action_name_map = {
+            "duplicate_charge": "check_payment",
+            "paid_but_not_activated": "sync_subscription",
+            "password_reset": "password_reset_support",
+        }
+
+        action_name = action_name_map.get(intake_result.get("intent"), "unknown_tool")
+        action_result = await execute_action_flow("CS-A1B2", action_name)
 
         action_log.append({
-            "action_name": action_result["action_name"],
-            "status": action_result["status"],
-            "details": action_result["details"]
+            "action_name": action_name,
+            "status": action_result.get("action_status", "error"),
+            "details": action_result.get("result_details", "No details")
         })
 
-        final_reply = action_result["final_reply_to_user"] or final_reply
-        is_resolved = action_result["is_resolved"]
+        if action_result.get("action_status") == "success":
+            if action_name == "check_payment":
+                final_reply = "We found your recent payment records and flagged this billing issue for resolution."
+                is_resolved = True
+            elif action_name == "sync_subscription":
+                final_reply = "Your subscription status has been refreshed. Please check your account again."
+                is_resolved = True
+            elif action_name == "password_reset_support":
+                final_reply = "We can help you with a new password reset flow."
+                is_resolved = True
+        else:
+            final_reply = "We found your request, but we could not complete the action automatically."
+            is_resolved = False
 
         agent_states.append({
             "name": "Action",
-            "status": "done" if action_result["status"] == "success" else "error",
-            "thought": f"Executed {action_result['action_name']}"
+            "status": "done" if action_result.get("action_status") == "success" else "error",
+            "thought": f"Executed {action_name}"
         })
         agent_states.append({
             "name": "Copilot",
@@ -60,7 +80,6 @@ def process_request(request):
         })
 
     elif routing_decision in {"ai_assist_human", "escalate_to_human"}:
-
         copilot_data = generate_copilot_data(
             request.message,
             f"Intent: {intake_result.get('intent')}, Category: {intake_result.get('category')}"
@@ -100,6 +119,6 @@ def process_request(request):
         routing_decision=routing_decision,
         agent_states=agent_states,
         action_log=action_log,
-        copilot=copilot_data if routing_decision in {"ai_assist_human", "escalate_to_human"} else None,
+        copilot=copilot_data,
         is_resolved=is_resolved
     )

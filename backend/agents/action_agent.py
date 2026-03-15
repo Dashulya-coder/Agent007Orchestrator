@@ -1,53 +1,55 @@
-from backend.services.billing_service import check_payment
+from backend.services.billing_service import check_payment, issue_refund
 from backend.services.subscription_service import sync_subscription
+from backend.services.mock_db import get_case
+from backend.services.action_log import append_log
+from backend.models.enums import RoutingDecision
 
 
-def execute_action(user_id: int, intake_result: dict) -> dict:
-    intent = intake_result.get("intent", "other")
+async def execute_action_flow(case_id: str, action_name: str):
+    case = get_case(case_id)
+    if not case:
+        return {"error": "Case not found"}
 
-    if intent == "duplicate_charge":
-        result = check_payment(user_id)
-        return {
-            "action_name": "check_payment",
-            "status": "success",
-            "details": result,
-            "is_resolved": True,
-            "final_reply_to_user": "We found your recent payment records and flagged this billing issue for resolution."
-        }
+    result = None
+    status = "success"
 
-    if intent == "paid_but_not_activated":
-        result = sync_subscription(user_id)
+    try:
+        if action_name == "check_payment":
+            result = check_payment(case["user_id"])
 
-        if "не знайдено" in result.lower():
-            return {
-                "action_name": "sync_subscription",
-                "status": "fail",
-                "details": result,
-                "is_resolved": False,
-                "final_reply_to_user": "We found your request, but we could not automatically update the subscription status."
-            }
+        elif action_name == "issue_refund":
+            payment_id = case.get("payment_id")
+            if not payment_id:
+                result = "Payment ID not found for refund action."
+                status = "error"
+            else:
+                result = issue_refund(payment_id)
 
-        return {
-            "action_name": "sync_subscription",
-            "status": "success",
-            "details": result,
-            "is_resolved": True,
-            "final_reply_to_user": "Your subscription status has been refreshed. Please check your account again."
-        }
+        elif action_name == "sync_subscription":
+            result = sync_subscription(case["user_id"])
 
-    if intent == "password_reset":
-        return {
-            "action_name": "password_reset_support",
-            "status": "success",
-            "details": "Password reset guidance prepared.",
-            "is_resolved": True,
-            "final_reply_to_user": "We can help you with a new password reset flow."
-        }
+        else:
+            result = f"Unknown tool: {action_name}"
+            status = "error"
+
+    except Exception as e:
+        result = f"System Error: {str(e)}"
+        status = "error"
+
+    if result and ("не знайдено" in str(result).lower() or "not found" in str(result).lower() or status == "error"):
+        status = "error"
+        case["routing_decision"] = RoutingDecision.ESCALATE_TO_HUMAN
+        case["final_reply_to_user"] = "Автоматична дія не вдалася. Передаю кейс спеціалісту."
+
+    append_log(
+        case_id=case_id,
+        action_name=action_name,
+        status=status,
+        details=str(result)
+    )
 
     return {
-        "action_name": "no_action",
-        "status": "skipped",
-        "details": "No automated action available.",
-        "is_resolved": False,
-        "final_reply_to_user": None
+        "action_status": status,
+        "result_details": str(result),
+        "new_routing": case.get("routing_decision")
     }
