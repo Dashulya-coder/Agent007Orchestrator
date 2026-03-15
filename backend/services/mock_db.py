@@ -18,28 +18,7 @@ payments = [
     {"id": "pay_999", "user_id": 3, "amount": 100.0, "status": "failed"}
 ]
 
-active_cases = {
-    "CS-A1B2": {
-        "case_id": "CS-A1B2",
-        "user_id": 3,
-        "messages": [
-            {"role": "client", "name": "Андрій", "text": "Мій акаунт зламали!"}
-        ],
-        "final_reply_to_user": "Security check required",
-        "intent": "account_compromised",
-        "priority": "urgent",
-        "status": "open",
-        "routing_decision": "escalate_to_human",
-        "agent_states": [],
-        "action_log": [],
-        "copilot": {
-            "summary": "User reports unauthorized access.",
-            "probable_cause": "Multiple failed logins detected.",
-            "suggested_actions": ["check_payment", "sync_subscription"],
-            "draft_reply": "We detected suspicious activity and are reviewing the case."
-        }
-    }
-}
+active_cases = {}
 
 
 def save_case(data):
